@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Fields: uid, name, email, role (admin/operator), lastLogin
+    //
+    // Collection: inventory
+    // Fields: id, name, type, spec, currentStock, safetyStock, status
+    //
+    // Collection: transactions
+    // Fields: id, type (in/out), itemId, itemName, quantity, spec, date, expiryDate, operatorId, operatorName, timestamp
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "chungchu250@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'name', 'role']) &&
+             data.uid is string &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.role in ['admin', 'operator'];
+    }
+
+    function isValidInventory(data) {
+      return data.keys().hasAll(['name', 'type', 'spec', 'currentStock', 'safetyStock']) &&
+             data.name is string && data.name.size() > 0 &&
+             data.currentStock is number &&
+             data.safetyStock is number;
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['type', 'itemId', 'quantity', 'operatorId', 'timestamp']) &&
+             data.type in ['in', 'out'] &&
+             data.quantity is number && data.quantity >= 1 && data.quantity <= 100;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    match /inventory/{itemId} {
+      allow read, write: if true;
+    }
+
+    match /transactions/{transactionId} {
+      allow read, write: if true;
+    }
+
+    match /inventoryChecks/{checkId} {
+      allow read, write: if true;
+    }
+  }
+}

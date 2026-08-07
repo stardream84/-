@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "系統使用者資訊",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "name": { "type": "string", "description": "使用者姓名" },
+        "email": { "type": "string", "description": "電子郵件" },
+        "role": { "type": "string", "enum": ["admin", "operator"], "description": "權限角色" },
+        "lastLogin": { "type": "string", "format": "date-time", "description": "最後登入時間" }
+      },
+      "required": ["uid", "name", "role"]
+    },
+    "InventoryItem": {
+      "title": "InventoryItem",
+      "description": "庫存品項總表",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "品項唯一識別碼" },
+        "name": { "type": "string", "description": "品項名稱" },
+        "type": { "type": "string", "description": "類型" },
+        "spec": { "type": "string", "description": "規格" },
+        "currentStock": { "type": "number", "description": "目前庫存量" },
+        "safetyStock": { "type": "number", "description": "安全庫存量" },
+        "status": { "type": "string", "enum": ["active", "inactive"], "description": "品項狀態" }
+      },
+      "required": ["name", "type", "spec", "currentStock", "safetyStock"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "出入庫明細紀錄",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "交易 ID" },
+        "type": { "type": "string", "enum": ["in", "out"], "description": "交易類型" },
+        "itemId": { "type": "string", "description": "品項 ID" },
+        "itemName": { "type": "string", "description": "品項名稱" },
+        "quantity": { "type": "number", "description": "數量" },
+        "spec": { "type": "string", "description": "規格" },
+        "date": { "type": "string", "format": "date", "description": "操作日期" },
+        "expiryDate": { "type": "string", "format": "date", "description": "到期日 (僅入庫)" },
+        "operatorId": { "type": "string", "description": "經手人 UID" },
+        "operatorName": { "type": "string", "description": "經手人姓名" },
+        "customerInfo": { "type": "string", "description": "客編或姓名 (僅限五六診出庫選填)" },
+        "doctor": { "type": "string", "description": "自填醫師 (僅限五六診出庫必填)" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "系統時間" }
+      },
+      "required": ["type", "itemId", "quantity", "operatorId", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "使用者資料"
+    },
+    "/inventory/{itemId}": {
+      "schema": "InventoryItem",
+      "description": "庫存品項資料"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "出入庫明細"
+    }
+  }
+}
