@@ -29,8 +29,20 @@ import {
   Share2,
   PackageOpen,
   ClipboardList,
-  RefreshCw
+  RefreshCw,
+  Database,
+  Download,
+  Upload,
+  FileSpreadsheet
 } from 'lucide-react';
+import { BackupManager } from './components/BackupManager';
+import { 
+  exportInventoryToCsv, 
+  exportTransactionsToCsv, 
+  exportChecksToCsv, 
+  downloadFile,
+  CATEGORY_LABELS 
+} from './utils/backupUtils';
 import { 
   collection, 
   query, 
@@ -642,7 +654,7 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [view, setView] = useState<'home' | 'in' | 'out' | 'admin-stock-nursing' | 'admin-stock-aesthetic' | 'admin-stock-skincare' | 'admin-transactions-nursing' | 'admin-transactions-aesthetic' | 'admin-transactions-skincare' | 'admin-transactions' | 'admin-users' | 'history' | 'admin-check-history' | 'admin-stock-iv-drip' | 'admin-stock-controlled'>('home');
+  const [view, setView] = useState<'home' | 'in' | 'out' | 'admin-stock-nursing' | 'admin-stock-aesthetic' | 'admin-stock-skincare' | 'admin-transactions-nursing' | 'admin-transactions-aesthetic' | 'admin-transactions-skincare' | 'admin-transactions' | 'admin-users' | 'history' | 'admin-check-history' | 'admin-stock-iv-drip' | 'admin-stock-controlled' | 'admin-backup'>('home');
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
   const [isCheckMode, setIsCheckMode] = useState(false);
@@ -1969,6 +1981,18 @@ export default function App() {
                     <ClipboardList className="w-4 h-4 text-amber-600" />
                     盤點歷史紀錄
                   </button>
+                  {profile?.role === 'admin' && (
+                    <>
+                      <div className="h-px bg-brand-accent/30 my-1 mx-2" />
+                      <button 
+                        onClick={() => { setView('admin-backup'); setAdminMenuOpen(false); }}
+                        className="w-full px-4 py-2.5 text-left text-sm text-brand-text hover:bg-brand-bg flex items-center gap-3 transition-colors font-medium"
+                      >
+                        <Database className="w-4 h-4 text-emerald-600" />
+                        資料備份與還原
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -2527,6 +2551,21 @@ export default function App() {
                   }}>
                     <History className="w-4 h-4" /> 出入庫明細
                   </Button>
+                  {profile?.role === 'admin' && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        const category = getCategoryFromView(view);
+                        const csvStr = exportInventoryToCsv(inventory, groupedInventory, category);
+                        const nowStr = format(new Date(), 'yyyyMMdd_HHmm');
+                        const catName = CATEGORY_LABELS[category] || category;
+                        downloadFile(csvStr, `星幸福_${catName}_${nowStr}.csv`, 'text/csv;charset=utf-8');
+                      }}
+                      title="匯出此庫存表為 Excel / CSV 檔案"
+                    >
+                      <Download className="w-4 h-4" /> 匯出 CSV
+                    </Button>
+                  )}
 
                   {view.startsWith('admin-stock-') && (
                     <div className="flex gap-2">
@@ -2890,12 +2929,30 @@ export default function App() {
                  view === 'admin-transactions-controlled' ? '管制藥物出入庫明細' :
                  '出入庫明細' }
               </h2>
-              <Button variant="outline" onClick={() => {
-                const category = getCategoryFromView(view);
-                setView(`admin-stock-${category}` as any);
-              }}>
-                返回{view.includes('-') ? '庫存表' : '首頁'}
-              </Button>
+              <div className="flex items-center gap-2">
+                {profile?.role === 'admin' && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      const category = view === 'admin-transactions' ? 'all' : getCategoryFromView(view);
+                      const filtered = transactions.filter(t => category === 'all' ? true : (t.category || 'nursing') === category);
+                      const csvStr = exportTransactionsToCsv(filtered, category);
+                      const nowStr = format(new Date(), 'yyyyMMdd_HHmm');
+                      const catName = category === 'all' ? '全部出入庫紀錄' : (CATEGORY_LABELS[category as InventoryCategory] || category);
+                      downloadFile(csvStr, `星幸福_${catName}_${nowStr}.csv`, 'text/csv;charset=utf-8');
+                    }}
+                    title="匯出出入庫歷史紀錄為 CSV"
+                  >
+                    <Download className="w-4 h-4" /> 匯出 CSV
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => {
+                  const category = getCategoryFromView(view);
+                  setView(`admin-stock-${category}` as any);
+                }}>
+                  返回{view.includes('-') ? '庫存表' : '首頁'}
+                </Button>
+              </div>
             </div>
             <Card 
               title={view === 'admin-transactions' ? '完整出入庫明細' : '分類出入庫明細'} 
@@ -2995,7 +3052,22 @@ export default function App() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-slate-900">盤點歷史紀錄</h2>
-              <Button variant="outline" onClick={() => setView('home')}>返回首頁</Button>
+              <div className="flex items-center gap-2">
+                {profile?.role === 'admin' && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      const csvStr = exportChecksToCsv(inventoryChecks, transactions);
+                      const nowStr = format(new Date(), 'yyyyMMdd_HHmm');
+                      downloadFile(csvStr, `星幸福_盤點歷史紀錄_${nowStr}.csv`, 'text/csv;charset=utf-8');
+                    }}
+                    title="匯出盤點歷史紀錄為 CSV"
+                  >
+                    <Download className="w-4 h-4" /> 匯出 CSV
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setView('home')}>返回首頁</Button>
+              </div>
             </div>
             <Card title="盤點紀錄一覽" subtitle="所有品項盤點調整紀錄">
               <div className="overflow-x-auto">
@@ -3314,7 +3386,18 @@ export default function App() {
           </div>
         )}
 
-        {/* Global Confirmation Modal */}
+        {view === 'admin-backup' && profile?.role === 'admin' && (
+          <BackupManager
+            inventory={inventory}
+            groupedInventory={groupedInventory}
+            transactions={transactions}
+            inventoryChecks={inventoryChecks}
+            users={users}
+            profile={profile}
+            db={db}
+            onClose={() => setView('home')}
+          />
+        )}
             {/* Edit Batch Modal */}
             {editingBatch && (
               <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">

@@ -1,5 +1,8 @@
 {
   "name": "星幸福庫存系統",
-  "description": "星幸福美學診所專用庫存管理系統，提供優雅且直觀的耗材追蹤與預警功能。",
-  "requestFramePermissions": []
+  "description": "星幸福美學診所專用庫存管理系統，提供優雅且直觀的耗材追蹤、預警與完整資料備份還原功能。",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
